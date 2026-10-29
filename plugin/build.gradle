@@ -17,7 +17,7 @@ description = projectDescription
 
 dependencies {
     // Published as a dependency of the plugin; the plugin puts this jar on the consumer's test runtime classpath.
-    implementation project(':listener')
+    api project(':listener')
     // Groovy needs the listener's supertype to resolve SkipReasonListener at compile time.
     compileOnly libs.junit.platform.launcher
     implementation gradleApi()

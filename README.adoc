@@ -1,7 +1,7 @@
 = Skip Report Gradle Plugin
 :project-version: 1.0.0
 
-image:https://github.com/infosmid-org/skip-report/actions/workflows/snapshot.yml/badge.svg[Build Status,link=https://github.com/infosmid-org/skip-report/actions/workflows/snapshot.yml]
+image:https://github.com/infosmid-org/skip-report-plugin/actions/workflows/snapshot.yml/badge.svg[Build Status,link=https://github.com/infosmid-org/skip-report-plugin/actions/workflows/snapshot.yml]
 image:https://img.shields.io/maven-central/v/org.infosmid.plugins/skip-report-plugin.svg[Maven Central,link=https://central.sonatype.com/artifact/org.infosmid.plugins/skip-report-plugin]
 image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License,link=LICENSE]
 
@@ -181,8 +181,8 @@ Run Gradle and the tests on Java 21 or later.
 [source,bash]
 ----
 ./gradlew build
-./gradlew publishToMavenLocal   # install both artifacts into ~/.m2/repository
 ./gradlew siteDocsZip           # user guide + Groovydoc, see build/site-docs
+./gradlew publishToMavenLocal   # install both artifacts into ~/.m2/repository
 ----
 
 To consume a locally published build, add `mavenLocal()` to `pluginManagement.repositories` and to `dependencyResolutionManagement.repositories` in the consuming build.

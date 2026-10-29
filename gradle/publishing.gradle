@@ -1,0 +1,63 @@
+/*
+ * publishing.gradle — publishing setup shared by the listener and plugin modules.
+ *
+ * Set these before you call `apply from` (the vanniktech maven-publish plugin must already be applied):
+ *
+ *     ext {
+ *         publishName        = 'Skip report listener'
+ *         publishDescription = '...'
+ *         publishArtifactId  = 'skip-report-listener'
+ *     }
+ *     apply from: "$rootDir/gradle/publishing.gradle"
+ */
+def repoUrl = "https://github.com/infosmid-org/${rootProject.name}".toString()
+
+publishing {
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri("https://maven.pkg.github.com/infosmid-org/${rootProject.name}")
+            credentials {
+                username = providers.environmentVariable('GITHUB_ACTOR').getOrElse('')
+                password = providers.environmentVariable('GITHUB_TOKEN').getOrElse('')
+            }
+        }
+    }
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+    if (providers.gradleProperty('signingInMemoryKey').isPresent()) {
+        signAllPublications()
+    }
+    coordinates(project.group.toString(), project.ext.publishArtifactId as String, project.version.toString())
+    pom {
+        name = project.ext.publishName as String
+        description = project.ext.publishDescription as String
+        inceptionYear = '2026'
+        url = repoUrl
+        licenses {
+            license {
+                name = 'The Apache License, Version 2.0'
+                url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                distribution = 'repo'
+            }
+        }
+        developers {
+            developer {
+                id = 'corneil'
+                name = 'Corneil du Plessis'
+                url = 'https://github.com/corneil'
+            }
+        }
+        scm {
+            url = repoUrl
+            connection = "scm:git:git://github.com/infosmid-org/${rootProject.name}.git".toString()
+            developerConnection = "scm:git:ssh://git@github.com/infosmid-org/${rootProject.name}.git".toString()
+        }
+        issueManagement {
+            system = 'GitHub'
+            url = "${repoUrl}/issues".toString()
+        }
+    }
+}

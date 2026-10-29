@@ -1,0 +1,15 @@
+[versions]
+java = "21"
+junit-platform = "1.11.4"
+asciidoctor-plugin = "5.0.3"
+gradle-plugin-publish = "2.2.1"
+maven-publish-plugin = "0.37.0"
+
+[libraries]
+# Provides TestExecutionListener, TestIdentifier, TestExecutionResult, TestPlan.
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+asciidoctor = { id = "org.asciidoctor.jvm", version.ref = "asciidoctor-plugin" }
+gradle-plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-plugin-publish" }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish-plugin" }

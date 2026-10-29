@@ -1,0 +1,99 @@
+// The Gradle plugin artifact.
+// Published with a plugin marker so consumers can apply it via:
+//     plugins { id 'org.infosmid.plugins.skip-report' version '<version>' }
+
+plugins {
+    id 'groovy'
+    id 'java-gradle-plugin'
+    alias(libs.plugins.maven.publish)
+    alias(libs.plugins.gradle.plugin.publish)
+    alias(libs.plugins.asciidoctor)
+}
+
+def projectName = 'Skip report plugin'
+def projectDescription = 'Gradle plugin that reports why tests were skipped'
+group = 'org.infosmid.plugins'
+description = projectDescription
+
+dependencies {
+    // Published as a dependency of the plugin; the plugin puts this jar on the consumer's test runtime classpath.
+    implementation project(':listener')
+    // Groovy needs the listener's supertype to resolve SkipReasonListener at compile time.
+    compileOnly libs.junit.platform.launcher
+    implementation gradleApi()
+    implementation localGroovy()
+}
+
+gradlePlugin {
+    website.set('https://github.com/infosmid-org/skip-report')
+    vcsUrl.set('https://github.com/infosmid-org/skip-report')
+    plugins {
+        register('skipReport') {
+            id = 'org.infosmid.plugins.skip-report'
+            implementationClass = 'org.infosmid.plugins.gradle.skipreport.SkipReportPlugin'
+            displayName = projectName
+            description = projectDescription
+            tags.set(['test', 'junit', 'skipped', 'report'])
+        }
+    }
+}
+
+ext {
+    publishName        = projectName
+    publishDescription = projectDescription
+    publishArtifactId  = 'skip-report-plugin'
+}
+apply from: "$rootProject.projectDir/gradle/publishing.gradle"
+
+// User guide is the root README.adoc rendered as index.html
+def guideSrc = layout.buildDirectory.dir('guide-src')
+def guideSrcTask = tasks.register('guideSrc', Sync) {
+    from(rootProject.projectDir) { include 'README.adoc' }
+    into guideSrc
+}
+
+asciidoc {
+    publications {
+        main {
+            sourceSet {
+                sourceDir = guideSrc.get().asFile.path
+                sources {
+                    include 'README.adoc'
+                }
+                attributes {
+                    addAll 'toc': 'left',
+                        'idprefix': '',
+                        'idseparator': '-'
+                }
+                missingIncludesAreFatal()
+            }
+            output 'asciidoctorj', 'html'
+        }
+    }
+}
+
+tasks.named('asciidoctorHtml') {
+    dependsOn guideSrcTask
+}
+
+tasks.register('siteDocsGuide', Sync) {
+    from(tasks.named('asciidoctorHtml')) {
+        include 'README.html'
+        rename 'README.html', 'index.html'
+    }
+    into layout.buildDirectory.dir('site-docs/guide')
+}
+
+// Properties read by gradle/site-docs.gradle (siteDocsZip); must be set before it is applied.
+ext {
+    siteDocsTitle       = projectName
+    siteDocsSummary     = projectDescription
+    siteDocsGuideTask   = 'siteDocsGuide'
+    siteDocsApiTask     = 'groovydoc'
+    siteDocsPublication = 'pluginMaven'
+    siteDocsArtifactId  = 'skip-report-plugin'
+    siteDocsTags        = ['Gradle', 'JUnit', 'Testing', 'Report']
+    siteDocsLicense     = 'Apache-2.0'
+    siteDocsSourceUrl   = "https://github.com/infosmid-org/${rootProject.name}".toString()
+}
+apply from: "$rootProject.projectDir/gradle/site-docs.gradle"

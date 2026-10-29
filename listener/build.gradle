@@ -1,0 +1,22 @@
+// The JUnit Platform runtime listener artifact.
+// Consumers add this on their test classpath; JUnit discovers it via ServiceLoader.
+
+plugins {
+    id 'java-library'
+    alias(libs.plugins.maven.publish)
+}
+group = 'org.infosmid'
+description = 'JUnit Platform listener that records why tests were skipped'
+
+dependencies {
+    // Provides TestExecutionListener, TestIdentifier, TestExecutionResult, TestPlan.
+    // Consumers already have it via JUnit anyway.
+    implementation libs.junit.platform.launcher
+}
+
+ext {
+    publishName        = 'Skip report listener'
+    publishDescription = project.description
+    publishArtifactId  = 'skip-report-listener'
+}
+apply from: "$rootProject.projectDir/gradle/publishing.gradle"

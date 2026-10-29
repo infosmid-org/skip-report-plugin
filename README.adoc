@@ -1,0 +1,188 @@
+= Skip Report Gradle Plugin
+:project-version: 1.0.0
+
+image:https://github.com/infosmid-org/skip-report/actions/workflows/snapshot.yml/badge.svg[Build Status,link=https://github.com/infosmid-org/skip-report/actions/workflows/snapshot.yml]
+image:https://img.shields.io/maven-central/v/org.infosmid.plugins/skip-report-plugin.svg[Maven Central,link=https://central.sonatype.com/artifact/org.infosmid.plugins/skip-report-plugin]
+image:https://img.shields.io/badge/License-Apache%202.0-blue.svg[License,link=LICENSE]
+
+This work is licensed under link:https://www.apache.org/licenses/LICENSE-2.0.html[Apache License 2.0]
+
+A Gradle plugin that produces a *detailed test skip-reason report*, differentiating between:
+
+[cols="1,3"]
+|===
+| Category in report | Cause
+
+| `CONDITION_DISABLED`
+| `@Disabled`, `@EnabledIf*`, `@DisabledIf*`, `@EnabledOnOs`, etc. (condition message captured)
+
+| `CONTAINER_DISABLED`
+| A whole test class disabled by a condition
+
+| `ASSUMPTION_ABORTED`
+| `Assumptions.assumeTrue(...)` / `assumeThat(...)` failing at runtime
+
+| `TASK_EXCLUSION`
+| Gradle `test { exclude '...' }`
+
+| `TASK_FILTER`
+| `--tests` / `includePatterns` (non-matching tests excluded)
+
+| `GRADLE_SKIPPED`
+| Fallback: skip seen only by Gradle, with no JUnit reason
+|===
+
+The report is written to `build/reports/skip-reasons.psv` (pipe-separated, with header) so it can be parsed after a full run instead of using `--test-dry-run`.
+
+== Getting started
+
+Plugin Id: org.infosmid.plugins.skip-report +
+Version: {project-version}
+
+The plugin and the listener are published to Maven Central and the plugin is also published to the Gradle Plugin Portal.
+No extra repository configuration is needed.
+
+=== Groovy DSL (`build.gradle`)
+[source,groovy,subs="attributes+"]
+----
+plugins {
+    id 'java'
+    id 'org.infosmid.plugins.skip-report' version '{project-version}'
+}
+----
+
+=== Kotlin DSL (`build.gradle.kts`)
+[source,kotlin,subs="attributes+"]
+----
+plugins {
+    java
+    id("org.infosmid.plugins.skip-report") version "{project-version}"
+}
+----
+
+=== Version Catalog (`gradle/libs.versions.toml`)
+
+Declare the plugin in the catalog:
+
+[source,toml,subs="attributes+"]
+----
+[versions]
+skip-report = "{project-version}"
+
+[plugins]
+infosmid-skip-report = { id = "org.infosmid.plugins.skip-report", version.ref = "skip-report" }
+----
+
+Then reference it through the generated `libs` accessor.
+
+.Groovy DSL (`build.gradle`)
+[source,groovy]
+----
+plugins {
+    id 'java'
+    alias(libs.plugins.infosmid.skip.report)
+}
+----
+
+.Kotlin DSL (`build.gradle.kts`)
+[source,kotlin]
+----
+plugins {
+    java
+    alias(libs.plugins.infosmid.skip.report)
+}
+----
+
+That's all. The plugin:
+
+* adds `org.infosmid:skip-report-listener:{project-version}` to `testRuntimeOnly`,
+* calls `useJUnitPlatform()`,
+* sets the `skipReport.file` system property,
+* writes the report header before tests and the filter footer after.
+
+=== Applying to all subprojects
+
+Pin the version once in the root project and apply it by id in the subprojects:
+
+[source,groovy,subs="attributes+"]
+----
+// root build.gradle
+plugins {
+    id 'org.infosmid.plugins.skip-report' version '{project-version}' apply false
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.infosmid.plugins.skip-report'
+
+    repositories { mavenCentral() }
+
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.11.4')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+    }
+
+    tasks.named('test') {
+        // optional: see skips even when forking
+        maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+    }
+}
+----
+
+== Modules
+
+[cols="1,1,3"]
+|===
+| Artifact | Group | Description
+
+| `skip-report-listener`
+| `org.infosmid`
+| JUnit Platform runtime listener. This is the only layer where skip _reasons_ actually exist.
+Auto-discovered via ServiceLoader.
+
+| `skip-report-plugin`
+| `org.infosmid.plugins`
+| Gradle plugin. It wires every `Test` task and adds the listener to the test classpath.
+|===
+
+Both modules are released with the same version.
+The plugin depends on the listener module, so it always adds the matching listener version.
+
+== Reading the report
+
+Per-module file: `build/reports/skip-reasons.psv`. Aggregate after a full run:
+
+[source,bash]
+----
+find . -path '*/build/reports/skip-reasons.psv' -exec cat {} \;
+----
+
+Parse (example, Groovy):
+
+[source,groovy]
+----
+new File('build/reports/skip-reasons.psv').readLines().drop(1).findAll { it }.each {
+    def (cat, id, name, src, reason) = it.split(/ \| /, 5)
+    println "${cat.padRight(20)} ${name} -> ${reason}"
+}
+----
+
+== Caveats
+
+* *Forked JVMs*: each fork's listener appends to the same file (line-atomic, unordered).
+Sort by unique id if you need stable ordering.
+* *Pure task exclusions* never execute, so they produce no per-test rows.
+The plugin records the _patterns_ (`TASK_EXCLUSION` / `TASK_FILTER`) instead.
+* The plugin and listener are built with a Java 21 toolchain.
+Run Gradle and the tests on Java 21 or later.
+
+== Building
+
+[source,bash]
+----
+./gradlew build
+./gradlew publishToMavenLocal   # install both artifacts into ~/.m2/repository
+./gradlew siteDocsZip           # user guide + Groovydoc, see build/site-docs
+----
+
+To consume a locally published build, add `mavenLocal()` to `pluginManagement.repositories` and to `dependencyResolutionManagement.repositories` in the consuming build.

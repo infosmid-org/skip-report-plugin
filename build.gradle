@@ -1,0 +1,41 @@
+// Root build file for the standalone skip-report project.
+//
+// It builds two artifacts and publishes them to Maven Central (and to ~/.m2 for local use):
+//
+//   1. org.infosmid:skip-report-listener          -> JUnit Platform runtime listener
+//   2. org.infosmid.plugins:skip-report-plugin    -> Gradle plugin (id 'org.infosmid.plugins.skip-report')
+//
+// Both modules always share one version, because the plugin adds the listener of that
+// same version to the consumer's test classpath.
+//
+// Build & publish locally:
+//     ./gradlew publishToMavenLocal
+//
+// Then consume from any other build by applying the plugin (see README.adoc).
+plugins {
+    alias(libs.plugins.maven.publish) apply false
+    alias(libs.plugins.gradle.plugin.publish) apply false
+    alias(libs.plugins.asciidoctor) apply false
+}
+
+def versionFromFile = new File(rootProject.projectDir, 'version.txt').text.trim()
+group = 'org.infosmid'
+version = providers.gradleProperty('releaseVersion').getOrNull() ?: versionFromFile
+
+subprojects {
+    apply plugin: 'java'
+    group = rootProject.group
+    version = rootProject.version
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(libs.versions.java.get().toInteger())
+        }
+    }
+}
+
+defaultTasks 'publishToMavenLocal'
